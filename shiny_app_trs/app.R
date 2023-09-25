@@ -8,44 +8,69 @@
 #
 
 library(shiny)
+library(ggplot2)
+library(dplyr)
+library(shinythemes)
 
+
+prompts_csv <- "data/estimulos_todos.csv"
+prompts <- read.csv(prompts_csv)
+demographic_csv <- "data/sociodemograficos_todos.csv"
+demographic <- read.csv(demographic_csv)
+words_csv <- "data/terminos_todos.csv"
+words <- read.csv(words_csv)
+
+
+df <- prompts %>%
+  inner_join(demographic, by = "id") %>%
+  inner_join(words, by = "id")
 # Define UI for application that draws a histogram
 ui <- fluidPage(
+    theme = shinytheme("slate"),
 
     # Application title
-    titlePanel("Old Faithful Geyser Data"),
+    titlePanel("Qué piensan las personas de las nuevas tecnologías"),
 
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
         sidebarPanel(
-            sliderInput("bins",
-                        "Number of bins:",
-                        min = 1,
-                        max = 50,
-                        value = 30)
+            selectInput("carrera",
+                        "Seleccione una carrera:",
+                        choices = unique(df$carrera)),
+            selectInput("estimulo",
+                        "Seleccione un estímulo:",
+                        choices = unique(df$estimulo)
+                        ),
+            sliderInput("edad",
+                        "Seleccione un rango de edad:",
+                        min = 18, max = 99, value = c(18, 99)),
+            radioButtons("sexo", "Seleccione un sexo:",
+                                     choices = c("varon", "mujer", "otro"),
+                                     selected = "varon")
+            
         ),
 
         # Show a plot of the generated distribution
         mainPanel(
-           plotOutput("distPlot")
+           tableOutput("filteredData")
         )
     )
 )
 
-# Define server logic required to draw a histogram
+
 server <- function(input, output) {
-
-    output$distPlot <- renderPlot({
-        # generate bins based on input$bins from ui.R
-        x    <- faithful[, 2]
-        bins <- seq(min(x), max(x), length.out = input$bins + 1)
-
-        # draw the histogram with the specified number of bins
-        hist(x, breaks = bins, col = 'darkgray', border = 'white',
-             xlab = 'Waiting time to next eruption (in mins)',
-             main = 'Histogram of waiting times')
-    })
+  filteredData <- reactive({
+    filtered_df <- df %>%
+      filter(carrera == input$carrera,
+             estimulo == input$estimulo,
+             edad >= input$edad[1] & edad <= input$edad[2],
+             sexo == input$sexo)
+    return(filtered_df)
+  })
+  
+  output$filteredData <- renderTable({
+    filteredData()
+  })
 }
-
 # Run the application 
 shinyApp(ui = ui, server = server)
