@@ -52,7 +52,7 @@ ui <- fluidPage(
 
         # Show a plot of the generated distribution
         mainPanel(
-           tableOutput("filteredData")
+           plotOutput("barplot")
         )
     )
 )
@@ -68,8 +68,23 @@ server <- function(input, output) {
     return(filtered_df)
   })
   
-  output$filteredData <- renderTable({
-    filteredData()
+  output$barplot <- renderPlot({
+    data <- filteredData()
+    
+    
+    frecuencia_palabra <- table(data$palabra)
+    
+    term_freq_df <- as.data.frame(frecuencia_palabra)
+    
+    colnames(term_freq_df) <- c("palabra", "frecuencia")
+    limite_minimo <- 2
+    palabras_filtradas <- term_freq_df %>% 
+      filter(frecuencia >= limite_minimo)
+    
+    ggplot(palabras_filtradas, aes(x = palabra, y = frecuencia)) +
+      geom_bar(stat = "identity") +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle=45,  hjust = 1))
   })
 }
 # Run the application 
