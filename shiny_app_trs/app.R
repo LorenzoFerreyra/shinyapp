@@ -85,13 +85,19 @@ server <- function(input, output) {
     term_freq_df <- as.data.frame(frecuencia_palabra)
     colnames(term_freq_df) <- c("palabra", "frecuencia")
     
-    return(term_freq_df)
+    
+    promedio_orden_valoracion <- filtered_df %>%
+      group_by(palabra) %>%
+      summarise(promedio_orden = mean(orden),
+                promedio_valoracion = mean(valoracion))
+    
+    return(list(term_freq_df = term_freq_df, promedio_orden_valoracion = promedio_orden_valoracion))
   })
   
   output$barplot <- renderPlot({
     data <- filteredData()
     
-    palabras_filtradas <- data %>% 
+    palabras_filtradas <- data$term_freq_df %>% 
       filter(frecuencia >= 2)
     
     
@@ -114,14 +120,10 @@ server <- function(input, output) {
   output$bubblechart <- renderPlot({
     data <- filteredData()
     
-    
-    promedio_orden_valoracion <- data %>%
-      group_by(palabra) %>%
-      summarise(promedio_orden = mean(orden),
-                promedio_valoracion = mean(valoracion))
+  
     
     
-    datos_combinados <- merge(term_freq_df, promedio_orden_valoracion, by = "palabra")
+    datos_combinados <- merge(data$term_freq_df, data$promedio_orden_valoracion, by = "palabra")
     
     ggplot(datos_combinados, aes(x = promedio_orden, y = promedio_valoracion, size = frecuencia)) +
       geom_point(alpha = 0.7) +
