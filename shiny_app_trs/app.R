@@ -29,7 +29,9 @@ ui <- fluidPage(
     theme = shinytheme("slate"),
 
     # Application title
-    titlePanel("Qué piensan las personas de las nuevas tecnologías"),
+    titlePanel(
+      h1("Representación social de las nuevas tecnologías", align = "center")
+      ),
 
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
@@ -37,16 +39,17 @@ ui <- fluidPage(
             selectInput("carrera",
                         "Seleccione una carrera:",
                         choices = unique(df$carrera)),
+            selectInput("nivel_estudios",
+                        "Seleccione un nivel de estudios:",
+                        choices = unique(df$nivel_estudios)),
             selectInput("estimulo",
                         "Seleccione un estímulo:",
                         choices = unique(df$estimulo)
                         ),
-            sliderInput("edad",
-                        "Seleccione un rango de edad:",
-                        min = 18, max = 99, value = c(18, 99)),
-            radioButtons("sexo", "Seleccione un sexo:",
-                                     choices = c("varon", "mujer", "otro"),
-                                     selected = "varon")
+            selectInput("sexo", "Seleccione un sexo:",
+                         choices = c("Todos", "varon", "mujer", "otro"),
+                         selected = "Todos")
+            
             
         ),
 
@@ -60,31 +63,46 @@ ui <- fluidPage(
 
 server <- function(input, output) {
   filteredData <- reactive({
-    filtered_df <- df %>%
+    selected_sex <- input$sexo
+    
+    if (selected_sex == "Todos") {
+      filtered_df <- df
+    } else {
+      filtered_df <- df[df$sexo %in% selected_sex, ]
+    }
+    
+    filtered_df <- filtered_df %>%
       filter(carrera == input$carrera,
-             estimulo == input$estimulo,
-             edad >= input$edad[1] & edad <= input$edad[2],
-             sexo == input$sexo)
+             estimulo == input$estimulo)
+    
     return(filtered_df)
   })
   
+
+  
+  
   output$barplot <- renderPlot({
     data <- filteredData()
-    
-    
     frecuencia_palabra <- table(data$palabra)
     
-    term_freq_df <- as.data.frame(frecuencia_palabra)
+      if (length(frecuencia_palabra) == 0) {
+        plot(NULL, xlim = c(0, 1), ylim = c(0, 1), xlab = "", ylab = "")
+        text(0.5, 0.5, "No hay datos para 'otro'", col = "red")
+        } else
+          {term_freq_df <- as.data.frame(frecuencia_palabra)
+          colnames(term_freq_df) <- c("palabra", "frecuencia")
+          limite_minimo <- 2
+          palabras_filtradas <- term_freq_df %>% 
+          filter(frecuencia >= limite_minimo)
+          
+          ggplot(palabras_filtradas, aes(x = palabra, y = frecuencia)) +
+          geom_bar(stat = "identity") +
+          theme_minimal() +
+          theme(axis.text.x = element_text(angle = 45, hjust = 1))
+      }
     
-    colnames(term_freq_df) <- c("palabra", "frecuencia")
-    limite_minimo <- 2
-    palabras_filtradas <- term_freq_df %>% 
-      filter(frecuencia >= limite_minimo)
     
-    ggplot(palabras_filtradas, aes(x = palabra, y = frecuencia)) +
-      geom_bar(stat = "identity") +
-      theme_minimal() +
-      theme(axis.text.x = element_text(angle=45,  hjust = 1))
+    
   })
 }
 # Run the application 
