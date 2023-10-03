@@ -55,13 +55,19 @@ ui <- fluidPage(
 
         # Show a plot of the generated distribution
         mainPanel(
-           plotOutput("barplot")
+          splitLayout(
+            plotOutput("barplot"),
+            plotOutput("bubblechart"),
+            cellWidths = c("50%", "50%")
+          )
+           
         )
     )
 )
 
 
 server <- function(input, output) {
+  
   filteredData <- reactive({
     selected_sex <- input$sexo
     
@@ -75,35 +81,63 @@ server <- function(input, output) {
       filter(carrera == input$carrera,
              estimulo == input$estimulo)
     
-    return(filtered_df)
+    frecuencia_palabra <- table(filtered_df$palabra)
+    term_freq_df <- as.data.frame(frecuencia_palabra)
+    colnames(term_freq_df) <- c("palabra", "frecuencia")
+    
+    return(term_freq_df)
   })
-  
-
-  
   
   output$barplot <- renderPlot({
     data <- filteredData()
-    frecuencia_palabra <- table(data$palabra)
     
-      if (length(frecuencia_palabra) == 0) {
-        plot(NULL, xlim = c(0, 1), ylim = c(0, 1), xlab = "", ylab = "")
-        text(0.5, 0.5, "No hay datos para 'otro'", col = "red")
-        } else
-          {term_freq_df <- as.data.frame(frecuencia_palabra)
-          colnames(term_freq_df) <- c("palabra", "frecuencia")
-          limite_minimo <- 2
-          palabras_filtradas <- term_freq_df %>% 
-          filter(frecuencia >= limite_minimo)
-          
-          ggplot(palabras_filtradas, aes(x = palabra, y = frecuencia)) +
-          geom_bar(stat = "identity") +
-          theme_minimal() +
-          theme(axis.text.x = element_text(angle = 45, hjust = 1))
-      }
+    palabras_filtradas <- data %>% 
+      filter(frecuencia >= 2)
     
     
+    if (nrow(palabras_filtradas) == 0) {
+      plot(NULL, xlim = c(0, 1), ylim = c(0, 1), xlab = "", ylab = "")
+      text(0.5, 0.5, "No hay datos para 'otro'", col = "red")
+    } else {
+      ggplot(palabras_filtradas, aes(x = palabra, y = frecuencia)) +
+        geom_bar(stat = "identity") +
+        theme_minimal() +
+        labs(title = "La representación en palabras",
+             x = "Palabras",
+             y = "Frecuencia",
+             size = "Frecuencia")+
+        theme(axis.text.x = element_text(angle = 45, hjust = 1),
+              plot.title = element_text(hjust = 0.5))
+    }
+  })
+  
+  output$bubblechart <- renderPlot({
+    data <- filteredData()
     
+    
+    promedio_orden_valoracion <- data %>%
+      group_by(palabra) %>%
+      summarise(promedio_orden = mean(orden),
+                promedio_valoracion = mean(valoracion))
+    
+    
+    datos_combinados <- merge(term_freq_df, promedio_orden_valoracion, by = "palabra")
+    
+    ggplot(datos_combinados, aes(x = promedio_orden, y = promedio_valoracion, size = frecuencia)) +
+      geom_point(alpha = 0.7) +
+      scale_size_continuous(range = c(5, 20)) +
+      labs(title = "Orden vs. valoración",
+           x = "Orden promedio",
+           y = "Valoración promedio",
+           size = "Frecuencia") +
+      theme_minimal() +
+      geom_text(aes(label = palabra),
+                check_overlap = TRUE,
+                size= 3) +
+      theme(plot.title = element_text(hjust = 0.5))
   })
 }
+
+
 # Run the application 
 shinyApp(ui = ui, server = server)
