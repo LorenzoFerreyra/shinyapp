@@ -86,12 +86,12 @@ server <- function(input, output) {
     colnames(term_freq_df) <- c("palabra", "frecuencia")
     
     
-    promedio_orden_valoracion <- filtered_df %>%
+    promedios_agrupado <- filtered_df %>%
       group_by(palabra) %>%
-      summarise(promedio_orden = mean(orden),
+      summarise(promedio_edad = mean(edad),
                 promedio_valoracion = mean(valoracion))
     
-    return(list(term_freq_df = term_freq_df, promedio_orden_valoracion = promedio_orden_valoracion))
+    return(list(term_freq_df = term_freq_df, promedios_agrupado = promedios_agrupado))
   })
   
   output$barplot <- renderPlot({
@@ -123,19 +123,18 @@ server <- function(input, output) {
   
     
     
-    datos_combinados <- merge(data$term_freq_df, data$promedio_orden_valoracion, by = "palabra")
+    datos_combinados <- merge(data$term_freq_df, data$promedios_agrupado, by = "palabra")
     
-    ggplot(datos_combinados, aes(x = promedio_orden, y = promedio_valoracion, size = frecuencia)) +
+    ggplot(datos_combinados, aes(x = promedio_edad,
+                                 y = palabra,
+                                 size = promedio_valoracion)) +
       geom_point(alpha = 0.7) +
       scale_size_continuous(range = c(5, 20)) +
-      labs(title = "Orden vs. valoración",
-           x = "Orden promedio",
-           y = "Valoración promedio",
-           size = "Frecuencia") +
+      labs(title = "Definiciones y valoración según edad",
+           x = "Edad promedio",
+           y = "Palabras",
+           size = "Valoración promedio") +
       theme_minimal() +
-      geom_text(aes(label = palabra),
-                check_overlap = TRUE,
-                size= 3) +
       theme(plot.title = element_text(hjust = 0.5))
   })
 }
