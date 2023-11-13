@@ -116,7 +116,7 @@ server <- function(input, output, session) {
     freq_cut <- resultado_funcion$freq_cut
     orden_cut <- resultado_funcion$orden_cut
     
-    ggplot(resultado_funcion$prototipico, aes(x=freq, y=orden_media, label=palabra)) + 
+    ggplot(resultado_funcion$prototipico, aes(x=freq, y=orden_media, label=input$variable3)) + 
       scale_x_continuous(trans='log') + 
       geom_hline(yintercept = orden_cut, linetype = 2) + 
       geom_vline(xintercept = freq_cut, linetype = 2) + 
